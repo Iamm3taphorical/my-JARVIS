@@ -12,7 +12,7 @@ from modules.commands import CommandRouter
 from modules.llm import OllamaClient
 from modules.stt import SpeechToText
 from modules.tts import PiperTTS
-from modules.utils import configure_logging, load_config
+from modules.utils import configure_logging, load_config, sanitize_assistant_response
 from modules.wakeword import WakeWordDetector
 
 
@@ -121,6 +121,7 @@ class JarvisAssistant:
         except Exception as exc:
             LOG.exception("Failed to respond")
             response = f"I could not complete that request: {exc}"
+        response = sanitize_assistant_response(response)
         print(f"{self.name}: {response}")
         self.emit("assistant", text=response)
         try:

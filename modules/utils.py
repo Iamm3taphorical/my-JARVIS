@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -51,3 +52,23 @@ def truncate_text(text: str, max_chars: int) -> str:
     if len(cleaned) <= max_chars:
         return cleaned
     return cleaned[: max_chars - 1].rstrip() + "."
+
+
+def sanitize_assistant_response(text: str) -> str:
+    cleaned = " ".join(text.strip().split())
+    if not cleaned:
+        return cleaned
+
+    cleaned = re.sub(
+        r"(?i)^\s*(?:yes|sure|certainly|of course|right away)[,.\s]+sir\b[,.\s]*"
+        r"(?:(?:i(?:'m| am)\s+on\s+it|on\s+it)[.!]?\s*)?",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(r"(?i)^\s*(?:i(?:'m| am)\s+on\s+it|on\s+it)[.!]?\s+", "", cleaned)
+    cleaned = re.sub(r"(?i)^\s*sir[,.!?:;]\s*", "", cleaned)
+    cleaned = re.sub(r"(?i)\s*,?\s+sir([.!?])?\s*$", lambda match: match.group(1) or "", cleaned)
+    cleaned = re.sub(r"(?i)\s*,?\s+sir[,;:]\s*$", "", cleaned)
+    cleaned = re.sub(r"\s+([,.!?;:])", r"\1", cleaned)
+    cleaned = " ".join(cleaned.split()).strip()
+    return cleaned or text.strip()

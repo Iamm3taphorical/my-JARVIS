@@ -7,7 +7,9 @@ import re
 import shlex
 import shutil
 import subprocess
+import urllib.error
 import urllib.parse
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +22,9 @@ class LaunchError(RuntimeError):
 
 
 class AppTools:
+    YOUTUBE_TOP_VIDEO_FILTER = "CAMSAhAB"
+    YOUTUBE_VIDEO_ID_RE = re.compile(r'"videoRenderer"\s*:\s*\{\s*"videoId"\s*:\s*"([A-Za-z0-9_-]{11})"')
+
     TARGET_ALIASES = {
         "b s code": "vs code",
         "brave": "brave browser",
@@ -47,6 +52,7 @@ class AppTools:
         "word processor": "word editor",
         "youtube website": "youtube",
         "youtube music": "youtube music",
+        "you tube music": "youtube music",
         "you tube": "youtube",
         "you too": "youtube",
     }
@@ -150,9 +156,15 @@ class AppTools:
                 url = f"{url}/search?q={urllib.parse.quote_plus(query)}"
             return self._launch_response("YouTube Music", [self.browser, url])
 
-        url = "https://www.youtube.com"
         if query and query not in {"music", "song", "songs"}:
-            url = f"{url}/results?search_query={urllib.parse.quote_plus(query)}"
+            watch_url = self._resolve_youtube_top_video_url(query)
+            if watch_url:
+                return self._launch_response("top YouTube video", [self.browser, watch_url])
+
+            url = self._youtube_search_url(query, sort_by_views=True)
+            return self._launch_response("YouTube search", [self.browser, url])
+
+        url = "https://www.youtube.com"
         return self._launch_response("YouTube", [self.browser, url])
 
     def write_note(self, content: str, editor: str = "word editor") -> str:
@@ -236,6 +248,45 @@ class AppTools:
         except LaunchError as exc:
             return f"I found {target}, but could not open it: {exc}"
         return f"Opening {target}."
+
+    def _youtube_search_url(self, query: str, sort_by_views: bool = False) -> str:
+        encoded = urllib.parse.quote_plus(query)
+        url = f"https://www.youtube.com/results?search_query={encoded}"
+        if sort_by_views:
+            url = f"{url}&sp={self.YOUTUBE_TOP_VIDEO_FILTER}"
+        return url
+
+    def _resolve_youtube_top_video_url(self, query: str) -> str | None:
+        search_url = self._youtube_search_url(query, sort_by_views=True)
+        request = urllib.request.Request(
+            search_url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+                ),
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=8) as response:
+                html = response.read(3_000_000).decode("utf-8", errors="ignore")
+        except (OSError, TimeoutError, urllib.error.URLError) as exc:
+            LOG.info("Could not resolve YouTube top video for %r: %s", query, exc)
+            return None
+
+        video_id = self._extract_youtube_video_id(html)
+        if not video_id:
+            LOG.info("Could not find a YouTube video id in search results for %r", query)
+            return None
+        return f"https://www.youtube.com/watch?v={video_id}"
+
+    def _extract_youtube_video_id(self, html: str) -> str | None:
+        match = self.YOUTUBE_VIDEO_ID_RE.search(html)
+        if match:
+            return match.group(1)
+        return None
 
     def _launch(self, command: list[str], cwd: str | None = None) -> None:
         if not command:

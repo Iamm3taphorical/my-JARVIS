@@ -18,6 +18,7 @@ class ToolSpec:
 
 class LocalToolRegistry:
     OPEN_VERB_RE = r"(?:open|opin|oppen|oh\s+pen|o\s+pen|oven|happen|launch|lunch|start|bring\s+up|pull\s+up)"
+    MEDIA_PLATFORM_RE = r"youtube\s+music|you\s+tube\s+music|youtube|you\s+tube|spotify"
 
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
@@ -172,11 +173,19 @@ class LocalToolRegistry:
         return None
 
     def _extract_play_request(self, text: str) -> tuple[str, str] | None:
-        match = re.match(r"^play(?:\s+(?:music|song|songs))?(?:\s+(.+?))?(?:\s+on\s+(youtube\s+music|youtube|spotify))?$", text)
+        match = re.match(
+            rf"^play(?:\s+(?:music|song|songs))?(?:\s+(.+?))?"
+            rf"(?:\s+(?:on|in|from|at)\s+({self.MEDIA_PLATFORM_RE}))?$",
+            text,
+        )
         if not match:
             return None
         query = self._strip_terminal_punctuation(match.group(1) or "").strip()
         platform = match.group(2) or "youtube"
+        trailing_platform = re.search(rf"\s+(?:on|in|from|at|and)\s+({self.MEDIA_PLATFORM_RE})$", query)
+        if trailing_platform:
+            platform = trailing_platform.group(1)
+            query = query[: trailing_platform.start()].strip()
         return query, platform
 
     def _extract_write_request(self, text: str) -> tuple[str, str] | None:

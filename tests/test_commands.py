@@ -6,6 +6,7 @@ from pathlib import Path
 
 from modules.tools.apps import AppTools
 from modules.tools.registry import LocalToolRegistry
+from modules.utils import sanitize_assistant_response
 
 
 def command_config(scripts_dir: str) -> dict:
@@ -43,6 +44,7 @@ class CommandRoutingTests(unittest.TestCase):
             self.launches.append((command, cwd))
 
         self.registry.apps._launch = fake_launch
+        self.registry.apps._resolve_youtube_top_video_url = lambda _query: None
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -95,8 +97,19 @@ class CommandRoutingTests(unittest.TestCase):
     def test_play_music_opens_youtube_search(self) -> None:
         response = self.registry.handle("play lofi music on youtube")
 
-        self.assertEqual(response, "Opening YouTube.")
-        self.assertEqual(self.launches, [(["xdg-open", "https://www.youtube.com/results?search_query=lofi+music"], None)])
+        self.assertEqual(response, "Opening YouTube search.")
+        self.assertEqual(
+            self.launches,
+            [(["xdg-open", "https://www.youtube.com/results?search_query=lofi+music&sp=CAMSAhAB"], None)],
+        )
+
+    def test_play_youtube_opens_resolved_top_video(self) -> None:
+        self.registry.apps._resolve_youtube_top_video_url = lambda _query: "https://www.youtube.com/watch?v=abc123DEF45"
+
+        response = self.registry.handle("play coldplays yellow and youtube")
+
+        self.assertEqual(response, "Opening top YouTube video.")
+        self.assertEqual(self.launches, [(["xdg-open", "https://www.youtube.com/watch?v=abc123DEF45"], None)])
 
     def test_write_note_opens_editor_with_created_file(self) -> None:
         response = self.registry.handle("write buy milk in text editor")
@@ -154,6 +167,35 @@ class AppLaunchTests(unittest.TestCase):
 
         self.assertIn("could not open it", response)
         self.assertIn("executable not found", response)
+
+    def test_youtube_video_id_extraction(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            apps = AppTools(
+                browser="xdg-open",
+                browser_url="https://www.google.com",
+                allowed_apps={},
+                websites={},
+                scripts_dir=Path(temp_dir),
+                notes_dir=Path(temp_dir),
+                project_root=Path(temp_dir),
+                code_editor="vs code",
+            )
+
+            video_id = apps._extract_youtube_video_id('{"videoRenderer":{"videoId":"abc123DEF45","title":{}}}')
+
+        self.assertEqual(video_id, "abc123DEF45")
+
+
+class ResponseStyleTests(unittest.TestCase):
+    def test_sanitizes_sir_acknowledgement(self) -> None:
+        response = sanitize_assistant_response("Yes sir, I'm on it. Opening YouTube.")
+
+        self.assertEqual(response, "Opening YouTube.")
+
+    def test_sanitizes_trailing_sir_address(self) -> None:
+        response = sanitize_assistant_response("The weather is clear, sir.")
+
+        self.assertEqual(response, "The weather is clear.")
 
 
 if __name__ == "__main__":
