@@ -1,0 +1,119 @@
+{
+  "assistant": {
+    "name": "JARVIS",
+    "wake_word_enabled": true,
+    "keyboard_fallback": true,
+    "rearm_delay_seconds": 1.2,
+    "command_prefixes": ["run", "open", "launch", "start", "what", "tell", "check", "show"],
+    "log_level": "INFO",
+    "follow_up_prompts": [
+      "I have executed the previous task. Do you want me to do anything else?",
+      "That task is complete. What should I handle next?",
+      "I have finished that request. Do you need another action?",
+      "The previous task has been executed. What would you like next?",
+      "That is done. Should I continue with anything else?",
+      "I completed it. Tell me the next thing you want handled.",
+      "Execution is complete. Do you want me to do another task?",
+      "Done with that one. What should I do next?"
+    ]
+  },
+  "llm": {
+    "model": "llama3.2:3b",
+    "host": "http://127.0.0.1:11434",
+    "timeout_seconds": 90,
+    "temperature": 0.4,
+    "top_p": 0.9,
+    "num_ctx": 2048,
+    "max_response_chars": 900,
+    "system_prompt": "You are JARVIS, a concise local Linux desktop assistant. Answer naturally in one or two short paragraphs unless the user asks for detail. Do not reveal chain-of-thought, reasoning traces, XML tags, markdown tables, or internal tool details. You cannot directly open apps, launch websites, run commands, click, type, change settings, or operate the desktop from normal chat. Local tools run before you receive the prompt. Never claim that you opened, launched, ran, changed, clicked, typed, or completed a desktop action unless the user says it already happened. If a requested desktop action was not handled by a local tool, say you cannot do that action yet and suggest a supported command such as 'open browser', 'open youtube', or 'run script name.sh'."
+  },
+  "stt": {
+    "recorder": "arecord",
+    "audio_device": "default",
+    "model_size": "small",
+    "preload_model": true,
+    "device": "cpu",
+    "compute_type": "int8",
+    "sample_rate": 16000,
+    "max_record_seconds": 10,
+    "silence_seconds": 1.35,
+    "start_threshold": 0.008,
+    "silence_threshold": 0.006,
+    "block_seconds": 0.1,
+    "pre_roll_seconds": 0.4,
+    "beam_size": 5,
+    "best_of": 5,
+    "patience": 1.0,
+    "temperature": 0.0,
+    "no_speech_threshold": 0.55,
+    "language": "en",
+    "vad_filter": true,
+    "vad_parameters": {
+      "min_silence_duration_ms": 650,
+      "speech_pad_ms": 350
+    },
+    "retry_without_vad_on_empty": true,
+    "initial_prompt": "The speaker may have a Bengali accent and is speaking English to a desktop voice assistant named Jarvis. Commands often mention: open, launch, start, run script, browser, Chrome, Google Chrome, Brave, VS Code, Visual Studio Code, YouTube, Gmail, GitHub, terminal, files, calculator, settings, weather, battery, time, system stats.",
+    "hotwords": "Jarvis open launch start run script browser Chrome Google Chrome Brave VS Code Visual Studio Code YouTube Gmail GitHub terminal files calculator settings weather battery time system stats"
+  },
+  "tts": {
+    "enabled": true,
+    "piper_binary": "venv/bin/piper",
+    "voice_model": "voices/en_US-lessac-medium.onnx",
+    "output_file": "/tmp/jarvis-response.wav",
+    "player": "aplay",
+    "speaker_id": null,
+    "length_scale": 0.95
+  },
+  "wakeword": {
+    "engine": "openwakeword",
+    "recorder": "arecord",
+    "audio_device": "default",
+    "model_name": "hey_jarvis",
+    "threshold": 0.55,
+    "sample_rate": 16000,
+    "chunk_samples": 1280,
+    "cooldown_seconds": 1.5
+  },
+  "commands": {
+    "browser": "xdg-open",
+    "browser_url": "https://www.google.com",
+    "weather_location": "Dhaka",
+    "scripts_dir": "scripts",
+    "notes_dir": "notes",
+    "code_editor": "vs code",
+    "allowed_apps": {
+      "terminal": "x-terminal-emulator",
+      "files": "nautilus",
+      "browser": "xdg-open https://www.google.com",
+      "chrome": "google-chrome",
+      "google chrome": "google-chrome",
+      "brave": "brave-browser",
+      "brave browser": "brave-browser",
+      "vs code": "code",
+      "vscode": "code",
+      "visual studio code": "code",
+      "code": "code",
+      "vlc": "vlc",
+      "arduino": "arduino",
+      "htop": "x-terminal-emulator -e htop",
+      "text editor": "gnome-text-editor",
+      "word editor": "libreoffice --writer",
+      "writer": "libreoffice --writer",
+      "document editor": "libreoffice --writer",
+      "calculator": "gnome-calculator",
+      "settings": "gnome-control-center",
+      "monitor": "gnome-system-monitor",
+      "system monitor": "gnome-system-monitor"
+    },
+    "websites": {
+      "google": "https://www.google.com",
+      "youtube": "https://www.youtube.com",
+      "gmail": "https://mail.google.com",
+      "github": "https://github.com",
+      "chatgpt": "https://chatgpt.com",
+      "spotify": "https://open.spotify.com",
+      "youtube music": "https://music.youtube.com"
+    }
+  }
+}
