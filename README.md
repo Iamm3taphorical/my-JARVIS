@@ -40,4 +40,5 @@ play lofi music on youtube
 play Coldplay Yellow on youtube
 open config json in vs code
 open word editor and write buy milk
+and many more...
 ```
